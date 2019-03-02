@@ -11,7 +11,12 @@ import java.util.stream.Stream;
 
 public class StudentDB implements StudentGroupQuery {
 
-    private static final Comparator<Student> comparator = Comparator.comparing(Student::getLastName).thenComparing(Student::getFirstName).thenComparingInt(Student::getId);
+    private static final int ZERO = 0;
+    private static final String EMPTY_STRING = "";
+    private static final Student DEFAULT_STUDENT = new Student(ZERO, EMPTY_STRING, EMPTY_STRING, EMPTY_STRING);
+    private static final Map.Entry<String, List<Student>> DEFAULT_ENTRY = new AbstractMap.SimpleEntry<>(EMPTY_STRING, Collections.singletonList(DEFAULT_STUDENT));
+
+    private static final Comparator<Student> cmp = Comparator.comparing(Student::getLastName).thenComparing(Student::getFirstName).thenComparingInt(Student::getId);
 
     private <T extends Collection<String>> T mappedStudentsCollection(List<Student> students, Function<Student, String> mapping, Supplier<T> collection) {
         return students.stream().map(mapping).collect(Collectors.toCollection(collection));
@@ -62,32 +67,32 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public List<Student> sortStudentsByName(Collection<Student> students) {
-        return sortStudents(students, comparator);
+        return sortStudents(students, cmp);
     }
 
-    private List<Student> findStudents(Collection<Student> students, Predicate<Student> predicate) {
-        return students.stream().filter(predicate).sorted(comparator).collect(Collectors.toList());
+    private List<Student> findStudents(Collection<Student> students, Function<Student, Stream<Student>> function) {
+        return students.stream().flatMap(function).sorted(cmp).collect(Collectors.toList());
     }
 
     @Override
     public List<Student> findStudentsByFirstName(Collection<Student> students, String firstName) {
-        return findStudents(students, student -> firstName.equals(student.getFirstName()));
+        return findStudents(students, student -> firstName.equals(student.getFirstName()) ? Stream.of(student) : Stream.empty());
     }
 
     @Override
     public List<Student> findStudentsByLastName(Collection<Student> students, String lastName) {
-        return findStudents(students, student -> lastName.equals(student.getLastName()));
+        return findStudents(students, student -> lastName.equals(student.getLastName()) ? Stream.of(student) : Stream.empty());
     }
 
     @Override
     public List<Student> findStudentsByGroup(Collection<Student> students, String group) {
-        return findStudents(students, student -> group.equals(student.getGroup()));
+        return findStudents(students, student -> group.equals(student.getGroup()) ? Stream.of(student) : Stream.empty());
     }
 
     @Override
     public Map<String, String> findStudentNamesByGroup(Collection<Student> students, String group) {
-        return students.stream().filter(student -> group.equals(student.getGroup())).
-                collect(Collectors.toMap(Student::getLastName, Student::getFirstName, (s1, s2) -> s1));
+        return students.stream().flatMap(student -> group.equals(student.getGroup()) ? Stream.of(student) : Stream.empty()).
+                collect(Collectors.toMap(Student::getLastName, Student::getFirstName, BinaryOperator.minBy(String::compareTo)));
     }
 
     @SafeVarargs
@@ -118,7 +123,7 @@ public class StudentDB implements StudentGroupQuery {
     }
 
     private String getGroupNameByCriteria(Comparator<Map.Entry<String, List<Student>>> criteria, Collection<Student> collection, Supplier<Map<String, List<Student>>> generator) {
-        return getGroupsStream(collection, generator).min(criteria).orElseThrow().getKey();
+        return getGroupsStream(collection, generator).min(criteria).orElse(DEFAULT_ENTRY).getKey();
     }
 
     @Override
