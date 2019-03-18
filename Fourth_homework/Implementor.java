@@ -24,55 +24,168 @@ import java.util.zip.ZipEntry;
  */
 public class Implementor implements JarImpler {
 
+    /**
+     * Filename extension for source java files.
+     */
     private final static String JAVA = "java";
+    /**
+     *
+     */
     private final static String CLASS_NAME_SUFFIX = "Impl";
 
+    /**
+     * Empty for generated classes.
+     */
     private final static String EMPTY = "";
+    /**
+     * Space for generated classes.
+     */
     private final static String SPACE = " ";
+    /**
+     * Intended for generated classes.
+     */
     private final static String TAB = "\t";
+    /**
+     * Line separator for generated classes.
+     */
     private final static String NEWLINE = System.lineSeparator();
+    /**
+     *
+     */
     private final static String DOUBLE_NEWLINE = NEWLINE + NEWLINE;
+    /**
+     * Colon for generated classes.
+     */
     private final static String COLON = ";";
+    /**
+     *
+     */
     private final static String CURLY_OPEN = "{";
+    /**
+     *
+     */
     private final static String CURLY_CLOSE = "}";
+    /**
+     *
+     */
     private final static String OPEN = "(";
+    /**
+     *
+     */
     private final static String CLOSE = ")";
+    /**
+     * Comma for generated classes.
+     */
     private final static String COMMA = ",";
+    /**
+     * Dot for generated classes.
+     */
     private final static String DOT = ".";
+    /**
+     *
+     */
     private final static String LESS = "<";
+    /**
+     *
+     */
     private final static String GREATER = ">";
+    /**
+     *
+     */
     private final static String TYPE_T = LESS + "T" + GREATER;
 
+    /**
+     *
+     */
     private final static String TEMP = "temp";
+    /**
+     *
+     */
     private final static String PACKAGE = "package ";
+    /**
+     * Filename extension for compiled java files.
+     */
     private final static String CLASS = "class ";
+    /**
+     *
+     */
     private final static String IMPLEMENTS = "implements ";
+    /**
+     *
+     */
     private final static String EXTENDS = "extends ";
+    /**
+     *
+     */
     private final static String THROWS = "throws ";
+    /**
+     *
+     */
     private final static String PUBLIC = "public ";
+    /**
+     *
+     */
     private final static String PROTECTED = "protected ";
+    /**
+     *
+     */
     private final static String RETURN = "return ";
+    /**
+     *
+     */
     private final static String SUPER = "super ";
 
+    /**
+     *
+     */
     private final static String DEPRECATED = "@Deprecated" + NEWLINE;
 
+    /**
+     *
+     */
     private String className;
 
+    /**
+     *
+     * @param clazz
+     */
     private void setClassName(Class<?> clazz) {
         this.className = clazz.getSimpleName() + CLASS_NAME_SUFFIX;
     }
 
+    /**
+     * Creates new instance of {@link Implementor}
+     */
+    public Implementor() {}
+
+    /**
+     *
+     * @param clazz
+     * @throws ImplerException
+     */
     private void validateClass(Class<?> clazz) throws ImplerException {
         if (clazz.isPrimitive() || clazz.isArray() || clazz == Enum.class || Modifier.isFinal(clazz.getModifiers())) {
             throw new ImplerException(String.format("Incorrect class: %s", clazz.getSimpleName()));
         }
     }
 
+    /**
+     *
+     * @param path
+     * @param clazz
+     * @param extension
+     * @return
+     */
     private Path getFilePath(Path path, Class<?> clazz, String extension) {
         return path.resolve(clazz.getPackage().getName().replace('.', File.separatorChar))
                 .resolve(clazz.getSimpleName() + CLASS_NAME_SUFFIX + DOT + extension.trim());
     }
 
+    /**
+     * Gets package of given file. Package is empty, if class is situated in default package
+     * @param clazz class to get package
+     * @return {@link String} representing package
+     */
     private String getPackageDeclaration(Class<?> clazz) {
         if (!clazz.getPackage().getName().equals(EMPTY)) {
             return PACKAGE + clazz.getPackageName() + COLON + DOUBLE_NEWLINE;
@@ -80,12 +193,23 @@ public class Implementor implements JarImpler {
         return EMPTY;
     }
 
+    /**
+     *
+     * @param clazz
+     * @return
+     */
     private String getClassDeclaration(Class<?> clazz) {
         var deriveKeyWord = clazz.isInterface() ? IMPLEMENTS : EXTENDS;
         return PUBLIC + CLASS + className + SPACE + deriveKeyWord + clazz.getSimpleName() +
                 SPACE + CURLY_OPEN + DOUBLE_NEWLINE;
     }
 
+    /**
+     *
+     * @param clazz
+     * @param writer
+     * @throws ImplerException
+     */
     private void generateConstructors(Class<?> clazz, BufferedWriter writer) throws ImplerException {
         var constructors = Arrays.stream(clazz.getDeclaredConstructors())
                 .filter(c -> !Modifier.isPrivate(c.getModifiers())).collect(Collectors.toList());
@@ -97,15 +221,37 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * Class used for correct representing {@link Method}
+     */
     private class CustomMethod {
+        /**
+         * Wrapped instance of {@link Method}
+         */
         private Method instance;
+        /**
+         *
+         */
         private boolean isOverridden;
 
+        /**
+         * Constructors a wrapper for specified instance of {@link Method}
+         *
+         * @param m other instance if {@link Method} to be wrapped
+         * @param isOverridden
+         */
         CustomMethod(Method m, boolean isOverridden) {
             instance = m;
             this.isOverridden = isOverridden;
         }
 
+        /**
+         * Compares the specified object with this wrapper for equality. Wrappers are equal, if their wrapped
+         * methods have equal name, return type and parameters' types.
+         *
+         * @param obj the object to be compared for equality with this wrapper
+         * @return true if specified object is equal to this wrapper
+         */
         @Override
         public boolean equals(Object obj) {
             if (obj == null) return false;
@@ -115,6 +261,12 @@ public class Implementor implements JarImpler {
             return false;
         }
 
+        /**
+         * Calculates hashcode for this wrapper via polynomial hashing
+         * using hashes of name, return type and parameters' types of it's {@link #instance}
+         *
+         * @return hashcode for this wrapper
+         */
         @Override
         public int hashCode() {
             return Arrays.hashCode(instance.getParameterTypes()) + instance.getReturnType().hashCode()
@@ -122,6 +274,11 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     *
+     * @param methods
+     * @param clazz
+     */
     private void fill(Set<CustomMethod> methods, Class<?> clazz) {
         if (clazz == null) return;
         methods.addAll(Arrays.stream(clazz.getDeclaredMethods())
@@ -131,6 +288,13 @@ public class Implementor implements JarImpler {
         fill(methods, clazz.getSuperclass());
     }
 
+    /**
+     * Writes implementation of abstract methods of given {@link Class} via specified
+     * {@link java.io.Writer}
+     *
+     * @param clazz given class to implement abstract methods
+     * @param writer given {@link java.io.Writer}
+     */
     private void generateAbstractMethods(Class<?> clazz, BufferedWriter writer) {
         var methods = new HashSet<CustomMethod>();
         fill(methods, clazz);
@@ -143,6 +307,12 @@ public class Implementor implements JarImpler {
         });
     }
 
+    /**
+     *
+     * @param executable
+     * @param writer
+     * @throws ImplerException
+     */
     private void generateExecutable(Executable executable, BufferedWriter writer) throws ImplerException {
         var isMethod = executable instanceof Method;
         var accessModifierMask = executable.getModifiers() & (Modifier.PROTECTED | Modifier.PUBLIC);
@@ -183,12 +353,22 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     *
+     * @param executable
+     * @return
+     */
     private String getConstructorImplementation(Executable executable) {
         var args = new StringJoiner(COMMA + SPACE);
         Arrays.stream(executable.getParameters()).forEach(param -> args.add(param.getName()));
         return TAB + SUPER + OPEN + args.toString() + CLOSE + COLON;
     }
 
+    /**
+     *
+     * @param returnType
+     * @return
+     */
     private String getMethodImplementation(Class<?> returnType) {
         String defaultValueStr;
         if (returnType.equals(Void.TYPE)) {
@@ -207,6 +387,11 @@ public class Implementor implements JarImpler {
         return TAB + RETURN + defaultValueStr + COLON;
     }
 
+    /**
+     *
+     * @param annotatedElements
+     * @return
+     */
     private String getJoinedStrings(AnnotatedElement[] annotatedElements) {
         var joiner = new StringJoiner(COMMA + SPACE);
         Arrays.stream(annotatedElements).forEach(ae -> {
@@ -219,6 +404,11 @@ public class Implementor implements JarImpler {
         return joiner.toString();
     }
 
+    /**
+     * Gets default value of given class
+     * @param token class to get default value
+     * @return {@link String} representing value
+     */
     private static String getDefaultValue(Class<?> token) {
         if (token.equals(boolean.class)) {
             return " false";
@@ -230,6 +420,12 @@ public class Implementor implements JarImpler {
         return " null";
     }
 
+    /**
+     *
+     * @param clazz
+     * @param path
+     * @throws ImplerException
+     */
     private void compile(Class<?> clazz, Path path) throws ImplerException {
         var compiler = ToolProvider.getSystemJavaCompiler();
         var joiner = new StringJoiner(File.pathSeparator);
@@ -246,6 +442,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     *
+     * @param clazz
+     * @param path
+     * @param sourcePath
+     * @throws ImplerException
+     */
     private void createJar(Class<?> clazz, Path path, Path sourcePath) throws ImplerException {
         var manifest = new Manifest();
         var attributes = manifest.getMainAttributes();
@@ -259,11 +462,27 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * Recursively deletes directory represented by <tt>path</tt>
+     *
+     * @param path directory to be recursively deleted
+     * @throws IOException if error occurred during deleting
+     */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void deleteDirectory(Path path) throws IOException {
         Files.walk(path).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
     }
 
+    /**
+     * @throws ImplerException if the given class cannot be generated for one of such reasons:
+     *  <ul>
+     *  <li> Some arguments are null </li>
+     *  <li> Given class is primitive or array. </li>
+     *  <li> Given class is final class or {@link Enum}. </li>
+     *  <li> class isn't an interface and contains only private constructors. </li>
+     *  <li> The problem with I/O occurred during implementation. </li>
+     *  </ul>
+     */
     @Override
     public void implement(Class<?> clazz, Path path) throws ImplerException {
         validateClass(clazz);
@@ -289,6 +508,22 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * Produces .jar file implementing class or interface specified by provided token.
+     * <p>
+     * Generated class full name should be same as full name of the type token with Impl suffix
+     * added.
+     * <p>
+     * During implementation creates temporary folder to store temporary .java and .class files.
+     * If program fails to delete temporary folder, it informs user about it.
+     * @throws ImplerException if the given class cannot be generated for one of such reasons:
+     *  <ul>
+     *  <li> Some arguments are null</li>
+     *  <li> Error occurs during implementation via {@link #implement(Class, Path)} </li>
+     *  <li> {@link javax.tools.JavaCompiler} failed to compile implemented class </li>
+     *  <li> The problems with I/O occurred during implementation. </li>
+     *  </ul>
+     */
     @Override
     public void implementJar(Class<?> clazz, Path path) throws ImplerException {
         validateClass(clazz);
@@ -315,8 +550,8 @@ public class Implementor implements JarImpler {
      * This function is used to choose which way of implementation to execute.
      * Runs {@link Implementor} in two possible ways:
      *  <ul>
-     *  <li> 2 arguments: <tt>className rootPath</tt> - runs {@link #implement(Class, Path)} with given arguments</li>
-     *  <li> 3 arguments: <tt>-jar className jarPath</tt> - runs {@link #implementJar(Class, Path)} with two second arguments</li>
+     *  <li> 2 arguments: className rootPath - runs {@link #implement(Class, Path)} with given arguments</li>
+     *  <li> 3 arguments: -jar className jarPath - runs {@link #implementJar(Class, Path)} with two second arguments</li>
      *  </ul>
      *  If arguments are incorrect or an error occurs during implementation returns message with information about error
      *
