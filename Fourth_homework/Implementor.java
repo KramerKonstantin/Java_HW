@@ -20,134 +20,137 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 
 /**
+ * @author Kramer Konstantin
  * Implementation class for {@link JarImpler} interface
  */
 public class Implementor implements JarImpler {
 
     /**
-     * Filename extension for source java files.
+     * File name extension for source source file.
      */
     private final static String JAVA = "java";
     /**
-     *
+     * Suffix of generated class name.
      */
     private final static String CLASS_NAME_SUFFIX = "Impl";
 
     /**
-     * Empty for generated classes.
+     * Empty string token.
      */
     private final static String EMPTY = "";
     /**
-     * Space for generated classes.
+     * Space token.
      */
     private final static String SPACE = " ";
     /**
-     * Intended for generated classes.
+     * Tabulation token.
      */
     private final static String TAB = "\t";
     /**
-     * Line separator for generated classes.
+     * New line token.
      */
     private final static String NEWLINE = System.lineSeparator();
     /**
-     *
+     * Double new line token.
      */
     private final static String DOUBLE_NEWLINE = NEWLINE + NEWLINE;
     /**
-     * Colon for generated classes.
+     * Colon token.
      */
     private final static String COLON = ";";
     /**
-     *
+     * Open curly bracket token.
      */
     private final static String CURLY_OPEN = "{";
     /**
-     *
+     * Close curly bracket token.
      */
     private final static String CURLY_CLOSE = "}";
     /**
-     *
+     * Open bracket token.
      */
     private final static String OPEN = "(";
     /**
-     *
+     * Close bracket token.
      */
     private final static String CLOSE = ")";
     /**
-     * Comma for generated classes.
+     * Comma token.
      */
     private final static String COMMA = ",";
     /**
-     * Dot for generated classes.
+     * Dot token.
      */
     private final static String DOT = ".";
     /**
-     *
+     * Less token.
      */
     private final static String LESS = "<";
     /**
-     *
+     * Greater token.
      */
     private final static String GREATER = ">";
     /**
-     *
+     * Type token.
      */
     private final static String TYPE_T = LESS + "T" + GREATER;
 
     /**
-     *
+     * String representation of keyword <code>temp</code>
      */
     private final static String TEMP = "temp";
     /**
-     *
+     * String representation of keyword <code>package</code>
      */
     private final static String PACKAGE = "package ";
     /**
-     * Filename extension for compiled java files.
+     * String representation of keyword <code>class</code>
      */
     private final static String CLASS = "class ";
     /**
-     *
+     * String representation of keyword <code>implements</code>
      */
     private final static String IMPLEMENTS = "implements ";
     /**
-     *
+     * String representation of keyword <code>extends</code>
      */
     private final static String EXTENDS = "extends ";
     /**
-     *
+     * String representation of keyword <code>throws</code>
      */
     private final static String THROWS = "throws ";
     /**
-     *
+     * String representation of keyword <code>public</code>
      */
     private final static String PUBLIC = "public ";
     /**
-     *
+     * String representation of keyword <code>protected</code>
      */
     private final static String PROTECTED = "protected ";
     /**
-     *
+     * String representation of keyword <code>return</code>
      */
     private final static String RETURN = "return ";
     /**
-     *
+     * String representation of keyword <code>super</code>
      */
     private final static String SUPER = "super ";
 
     /**
-     *
+     * String representation of annotation {@link Deprecated}
      */
     private final static String DEPRECATED = "@Deprecated" + NEWLINE;
 
     /**
-     *
+     * String representation of generated class's {@link Class#getSimpleName()}
      */
     private String className;
 
     /**
+     * Sets field {@link #className} to actual class name of target generated class.
+     * This method is only used to set field {@link #className}.
      *
-     * @param clazz
+     * @param clazz target type token
      */
     private void setClassName(Class<?> clazz) {
         this.className = clazz.getSimpleName() + CLASS_NAME_SUFFIX;
@@ -156,12 +159,21 @@ public class Implementor implements JarImpler {
     /**
      * Creates new instance of {@link Implementor}
      */
-    public Implementor() {}
+    private Implementor() {}
 
     /**
+     * Checks if a class can be extended.
+     * Note: a class can't be extended if:
+     * <ul>
+     *     <li>It is a primitive</li>
+     *     <li>It is final</li>
+     *     <li>It is array</li>
+     *     <li>It is enum</li>
+     *     <li>It is {@link Enum}</li>
+     * </ul>
      *
-     * @param clazz
-     * @throws ImplerException
+     * @param clazz target type token
+     * @throws ImplerException if the class can't be extended
      */
     private void validateClass(Class<?> clazz) throws ImplerException {
         if (clazz.isPrimitive() || clazz.isArray() || clazz == Enum.class || Modifier.isFinal(clazz.getModifiers())) {
@@ -170,11 +182,12 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Returns full path to the file with target class implementation.
      *
-     * @param path
-     * @param clazz
-     * @param extension
-     * @return
+     * @param path initial path
+     * @param clazz target type token
+     * @param extension extension of target source file, e.g. {@value #JAVA}
+     * @return full path to the file with target class implementation
      */
     private Path getFilePath(Path path, Class<?> clazz, String extension) {
         return path.resolve(clazz.getPackage().getName().replace('.', File.separatorChar))
@@ -194,9 +207,11 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Return class declaration of the generated class in the following format:
+     * <code>class className;</code> with two line breaks at the end.
      *
-     * @param clazz
-     * @return
+     * @param clazz target type token
+     * @return class declaration with two line breaks at the end
      */
     private String getClassDeclaration(Class<?> clazz) {
         var deriveKeyWord = clazz.isInterface() ? IMPLEMENTS : EXTENDS;
@@ -205,10 +220,11 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Generates all callable constructors of target type.
      *
-     * @param clazz
+     * @param clazz target type token
      * @param writer
-     * @throws ImplerException
+     * @throws ImplerException if there is no callable constructor in the target class.
      */
     private void generateConstructors(Class<?> clazz, BufferedWriter writer) throws ImplerException {
         var constructors = Arrays.stream(clazz.getDeclaredConstructors())
@@ -222,23 +238,26 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Class used for correct representing {@link Method}
+     * A wrapper of {@link Method} for proper method comparing.
      */
     private class CustomMethod {
         /**
-         * Wrapped instance of {@link Method}
+         * Instance of the method.
          */
         private Method instance;
         /**
-         *
+         * A flag that shows if we need to override the method.
+         * It is set to <code>true</code> if we met a <code>final</code> or just not <code>abstract</code> method in
+         * the <code>super</code> class.
+         * Otherwise, it is set to <code>false</code>.
          */
         private boolean isOverridden;
 
         /**
-         * Constructors a wrapper for specified instance of {@link Method}
+         * Constructor for the wrapper that receives instance and the flag.
          *
-         * @param m other instance if {@link Method} to be wrapped
-         * @param isOverridden
+         * @param m target instance of {@link Method}
+         * @param isOverridden target flag
          */
         CustomMethod(Method m, boolean isOverridden) {
             instance = m;
@@ -246,11 +265,15 @@ public class Implementor implements JarImpler {
         }
 
         /**
-         * Compares the specified object with this wrapper for equality. Wrappers are equal, if their wrapped
-         * methods have equal name, return type and parameters' types.
+         * Custom {@link Object#equals(Object)} method to compare two instances of {@link Method}.
+         * Methods are equal if:
+         * <ul>
+         *     <li>The other method is not <code>null</code></li>
+         *     <li>The other method's {@link #hashCode()} is the same</li>
+         * </ul>
          *
-         * @param obj the object to be compared for equality with this wrapper
-         * @return true if specified object is equal to this wrapper
+         * @param obj target instance
+         * @return <code>true</code> if instances are equal, <code>false</code> otherwise
          */
         @Override
         public boolean equals(Object obj) {
@@ -262,10 +285,11 @@ public class Implementor implements JarImpler {
         }
 
         /**
-         * Calculates hashcode for this wrapper via polynomial hashing
-         * using hashes of name, return type and parameters' types of it's {@link #instance}
+         * Calculates hash code of a {@link Method} instance
+         * Formula: {@link Arrays#hashCode(Object[])} of type parameters plus {@link Class#hashCode()} of
+         * return type plus {@link String#hashCode()} of name.
          *
-         * @return hashcode for this wrapper
+         * @return hash code of the {@link #instance}
          */
         @Override
         public int hashCode() {
@@ -275,9 +299,10 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Adds all abstract methods of the target type to {@link Set} of {@link CustomMethod}
      *
-     * @param methods
-     * @param clazz
+     * @param methods target set
+     * @param clazz target type token
      */
     private void fill(Set<CustomMethod> methods, Class<?> clazz) {
         if (clazz == null) return;
@@ -308,10 +333,25 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Generates implementation of an {@link Executable}.
+     * The executable must be either {@link Method} or {@link Constructor} to work correctly.
+     * Implementation contains:
+     * <ul>
+     *     <li>[optional] {@link Deprecated} annotation if needed</li>
+     *     <li>Access modifier</li>
+     *     <li>[optional] Type parameters (if it is a method)</li>
+     *     <li>[optional] Return type (if it is a method)</li>
+     *     <li>Name ({@link #className} if it is a constructor</li>
+     *     <li>List of all checked exceptions thrown</li>
+     *     <li>Implementation formed by either {@link #getMethodImplementation(Class)} or
+     *     {@link #getConstructorImplementation(Executable)}</li>
+     * </ul>
      *
-     * @param executable
+     * @param executable target executable
      * @param writer
-     * @throws ImplerException
+     * @throws ImplerException if there is no callable constructor in the target class.
+     *
+     * @see "https://www.geeksforgeeks.org/checked-vs-unchecked-exceptions-in-java/"
      */
     private void generateExecutable(Executable executable, BufferedWriter writer) throws ImplerException {
         var isMethod = executable instanceof Method;
@@ -354,9 +394,11 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Returns implementation of a constructor.
+     * Implementation contains only call of the super constructor.
      *
-     * @param executable
-     * @return
+     * @param executable target constructor
+     * @return string representation of constructor's implementation
      */
     private String getConstructorImplementation(Executable executable) {
         var args = new StringJoiner(COMMA + SPACE);
@@ -365,9 +407,13 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Returns implementation of a method by a return type.
+     * Implementation contains <code>false</code> for <code>boolean</code> type, {@link #EMPTY} for
+     * <code>void</code> type, <code>0</code> for other primitives and <code>null</code> for
+     * classes.
      *
-     * @param returnType
-     * @return
+     * @param returnType target return type
+     * @return string representation of method's implementation
      */
     private String getMethodImplementation(Class<?> returnType) {
         String defaultValueStr;
@@ -388,9 +434,12 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Returns comma-separated elements of {@link AnnotatedElement}.
+     * This method is most commonly used to get arguments list as a string but can be easily
+     * used for other purposes.
      *
-     * @param annotatedElements
-     * @return
+     * @param annotatedElements list of {@link AnnotatedElement}
+     * @return string representation of comma-separated arguments
      */
     private String getJoinedStrings(AnnotatedElement[] annotatedElements) {
         var joiner = new StringJoiner(COMMA + SPACE);
@@ -421,10 +470,13 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Compiles a provided source file using system java compiler.
+     * This method uses class path used when launching the program so make sure you specified
+     * all the paths (including modules) in the <code>-classpath</code> flag.
      *
-     * @param clazz
-     * @param path
-     * @throws ImplerException
+     * @param clazz target type token
+     * @param path target source file
+     * @throws ImplerException if compilation error has occurred when compiling target source file.
      */
     private void compile(Class<?> clazz, Path path) throws ImplerException {
         var compiler = ToolProvider.getSystemJavaCompiler();
@@ -443,11 +495,13 @@ public class Implementor implements JarImpler {
     }
 
     /**
+     * Creates a <code>.jar</code> file.
+     * Note, that the obtained file is not executable and contains only one <code>.class</code> file.
      *
-     * @param clazz
-     * @param path
-     * @param sourcePath
-     * @throws ImplerException
+     * @param clazz target type token
+     * @param path target path for the output <code>jar</code> file
+     * @param sourcePath source file of <code>.class</code> file
+     * @throws ImplerException if an internal {@link IOException} has occurred
      */
     private void createJar(Class<?> clazz, Path path, Path sourcePath) throws ImplerException {
         var manifest = new Manifest();
