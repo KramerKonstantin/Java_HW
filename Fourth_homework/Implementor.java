@@ -26,7 +26,7 @@ import java.util.zip.ZipEntry;
 public class Implementor implements JarImpler {
 
     /**
-     * File name extension for source source file.
+     * File name extension for source file.
      */
     private final static String JAVA = "java";
     /**
@@ -159,7 +159,7 @@ public class Implementor implements JarImpler {
     /**
      * Creates new instance of {@link Implementor}
      */
-    private Implementor() {}
+    public Implementor() {}
 
     /**
      * Checks if a class can be extended.
@@ -190,14 +190,16 @@ public class Implementor implements JarImpler {
      * @return full path to the file with target class implementation
      */
     private Path getFilePath(Path path, Class<?> clazz, String extension) {
-        return path.resolve(clazz.getPackage().getName().replace('.', File.separatorChar))
+        return path.resolve(clazz.getPackage().getName().replace(DOT.charAt(0), File.separatorChar))
                 .resolve(clazz.getSimpleName() + CLASS_NAME_SUFFIX + DOT + extension.trim());
     }
 
     /**
-     * Gets package of given file. Package is empty, if class is situated in default package
-     * @param clazz class to get package
-     * @return {@link String} representing package
+     * Return package declaration of the generated class in the following format:
+     * <code>package a.b.c;</code> with two line breaks at the end.
+     *
+     * @param clazz target type token
+     * @return package declaration with two line breaks at the end
      */
     private String getPackageDeclaration(Class<?> clazz) {
         if (!clazz.getPackage().getName().equals(EMPTY)) {
@@ -220,10 +222,11 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Generates all callable constructors of target type.
+     * Writes implementation of constructors of given {@link Class} via specified
+     * {@link BufferedWriter}
      *
      * @param clazz target type token
-     * @param writer
+     * @param writer given {@link BufferedWriter}
      * @throws ImplerException if there is no callable constructor in the target class.
      */
     private void generateConstructors(Class<?> clazz, BufferedWriter writer) throws ImplerException {
@@ -315,10 +318,10 @@ public class Implementor implements JarImpler {
 
     /**
      * Writes implementation of abstract methods of given {@link Class} via specified
-     * {@link java.io.Writer}
+     * {@link BufferedWriter}
      *
      * @param clazz given class to implement abstract methods
-     * @param writer given {@link java.io.Writer}
+     * @param writer given {@link BufferedWriter}
      */
     private void generateAbstractMethods(Class<?> clazz, BufferedWriter writer) {
         var methods = new HashSet<CustomMethod>();
@@ -348,7 +351,7 @@ public class Implementor implements JarImpler {
      * </ul>
      *
      * @param executable target executable
-     * @param writer
+     * @param writer given {@link BufferedWriter}
      * @throws ImplerException if there is no callable constructor in the target class.
      *
      * @see "https://www.geeksforgeeks.org/checked-vs-unchecked-exceptions-in-java/"
@@ -517,7 +520,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Recursively deletes directory represented by <tt>path</tt>
+     * Recursively deletes directory represented by <code>path</code>
      *
      * @param path directory to be recursively deleted
      * @throws IOException if error occurred during deleting
@@ -528,14 +531,18 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * @throws ImplerException if the given class cannot be generated for one of such reasons:
-     *  <ul>
-     *  <li> Some arguments are null </li>
-     *  <li> Given class is primitive or array. </li>
-     *  <li> Given class is final class or {@link Enum}. </li>
-     *  <li> class isn't an interface and contains only private constructors. </li>
-     *  <li> The problem with I/O occurred during implementation. </li>
-     *  </ul>
+     * Generates implementation of a class denoted by the provided type token and creates a <code>.jar</code>
+     * file which contains that implementation in the provided path.
+     *
+     * @param clazz target type token
+     * @param path target path
+     * @throws ImplerException if:
+     * <ul>
+     *     <li>One or more arguments are <code>null</code></li>
+     *     <li>Target class can't be extended</li>
+     *     <li>An internal {@link IOException} has occurred when handling I/O processes</li>
+     *     <li>There are no callable constructors in the target class</li>
+     * </ul>
      */
     @Override
     public void implement(Class<?> clazz, Path path) throws ImplerException {
@@ -563,20 +570,19 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Produces .jar file implementing class or interface specified by provided token.
-     * <p>
-     * Generated class full name should be same as full name of the type token with Impl suffix
-     * added.
-     * <p>
-     * During implementation creates temporary folder to store temporary .java and .class files.
-     * If program fails to delete temporary folder, it informs user about it.
-     * @throws ImplerException if the given class cannot be generated for one of such reasons:
-     *  <ul>
-     *  <li> Some arguments are null</li>
-     *  <li> Error occurs during implementation via {@link #implement(Class, Path)} </li>
-     *  <li> {@link javax.tools.JavaCompiler} failed to compile implemented class </li>
-     *  <li> The problems with I/O occurred during implementation. </li>
-     *  </ul>
+     * Generates implementation of a class denoted by the provided type token and creates a <code>.jar</code>
+     * file which contains that implementation in the provided path.
+     *
+     * @param clazz target type token
+     * @param path target path
+     * @throws ImplerException if:
+     * <ul>
+     *     <li>One or more arguments are <code>null</code></li>
+     *     <li>Target class can't be extended</li>
+     *     <li>An internal {@link IOException} has occurred when handling I/O processes</li>
+     *     <li>{@link javax.tools.JavaCompiler} failed to compile target source file</li>
+     *     <li>There are no callable constructors in the target class</li>
+     * </ul>
      */
     @Override
     public void implementJar(Class<?> clazz, Path path) throws ImplerException {
@@ -604,8 +610,8 @@ public class Implementor implements JarImpler {
      * This function is used to choose which way of implementation to execute.
      * Runs {@link Implementor} in two possible ways:
      *  <ul>
-     *  <li> 2 arguments: className rootPath - runs {@link #implement(Class, Path)} with given arguments</li>
-     *  <li> 3 arguments: -jar className jarPath - runs {@link #implementJar(Class, Path)} with two second arguments</li>
+     *      <li> 2 arguments: className rootPath - runs {@link #implement(Class, Path)} with given arguments</li>
+     *      <li> 3 arguments: -jar className jarPath - runs {@link #implementJar(Class, Path)} with two second arguments</li>
      *  </ul>
      *  If arguments are incorrect or an error occurs during implementation returns message with information about error
      *
