@@ -1,17 +1,15 @@
 Потокобезопасный класс WebCrawler, который будет рекурсивно обходить сайты.
 1. Класс WebCrawler имеет конструктор
-	public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost)
+public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost)
 2. downloader позволяет скачивать страницы и извлекать из них ссылки;
 3. downloaders — максимальное число одновременно загружаемых страниц;
 4. extractors — максимальное число страниц, из которых извлекаются ссылки;
 5. perHost — максимальное число страниц, одновременно загружаемых c одного хоста. Для опредения хоста используется метод getHost класса URLUtils из тестов.
 5. Класс WebCrawler реализует интерфейс Crawler
-                        public interface Crawler extends AutoCloseable {
-                            List<String> download(String url, int depth) throws IOException;
-
-                            void close();
-                        }
-                    
+public interface Crawler extends AutoCloseable {
+	List<String> download(String url, int depth) throws IOException;
+	void close();
+}
 6. Метод download рекурсивно обходит страницы, начиная с указанного URL на указанную глубину и возвращает список загруженных страниц и файлов. Например, если глубина равна 1, то загружена только указанная страница. Если глубина равна 2, то указанная страница и те страницы и файлы, на которые она ссылается и так далее. Этот метод может вызываться параллельно в нескольких потоках.
 7. Загрузка и обработка страниц (извлечение ссылок) выполняется максимально параллельно, с учетом ограничений на число одновременно загружаемых страниц (в том числе с одного хоста) и страниц, с которых загружаются ссылки.
 8. Для распараллеливания разрешается создать до downloaders + extractors вспомогательных потоков.
