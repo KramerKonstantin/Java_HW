@@ -18,19 +18,17 @@
 9. Загружать и/или извлекать ссылки из одной и той же страницы в рамках одного обхода (download) запрещается.
 10. Метод close завершает все вспомогательные потоки.
 11. Для загрузки страниц применяется Downloader, передаваемый первым аргументом конструктора.
-                        public interface Downloader {
-                            public Document download(final String url) throws IOException;
-                        }
+public interface Downloader {
+	public Document download(final String url) throws IOException;
+}
                     
 12. Метод download загружает документ по его адресу (URL).
-13. Документ позволяет получить ссылки по загруженной странице:
-                    public interface Document {
-                        List<String> extractLinks() throws IOException;
-                    }
+13. Документ позволяет получить ссылки по загруженной странице: 
+public interface Document {
+	List<String> extractLinks() throws IOException;
+}
                 
 14. Ссылки, возвращаемые документом являются абсолютными и имеют схему http или https.
 15. Реализован метод main, позволяющий запустить обход из командной строки
-Командная строка
-                    WebCrawler url [depth [downloads [extractors [perHost]]]]
-                
+Командная строка: WebCrawler url [depth [downloads [extractors [perHost]]]]
 16. Для загрузки страниц требуется использовать реализацию CachingDownloader из тестов.
